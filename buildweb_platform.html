@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BuildWeb Platform</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel Standalone CDN -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    /* Smooth scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.3);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.5);
+    }
+  </style>
+</head>
+<body class="bg-[#0d1117] text-gray-100 min-h-screen selection:bg-blue-600 selection:text-white antialiased">
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+    import { 
+      getAuth, 
+      signInAnonymously, 
+      signInWithCustomToken, 
+      onAuthStateChanged,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword
+    } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      getDoc,
+      setDoc, 
+      addDoc, 
+      updateDoc, 
+      deleteDoc, 
+      onSnapshot 
+    } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+    const { useState, useEffect, useRef } = React;
+
+    // --- Target B SVG Logo ---
+    const TargetLogo = ({ className = "w-7 h-7", color = "currentColor" }) => (
+      <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="36" stroke={color} strokeWidth="6" />
+        <line x1="50" y1="5" x2="50" y2="22" stroke={color} strokeWidth="6" strokeLinecap="round" />
+        <line x1="50" y1="78" x2="50" y2="95" stroke={color} strokeWidth="6" strokeLinecap="round" />
+        <line x1="5" y1="50" x2="22" y2="50" stroke={color} strokeWidth="6" strokeLinecap="round" />
+        <line x1="78" y1="50" x2="95" y2="50" stroke={color} strokeWidth="6" strokeLinecap="round" />
+        <text x="50" y="63" fontSize="42" fontWeight="900" fill={color} textAnchor="middle" fontFamily="sans-serif">B</text>
+      </svg>
+    );
+
+    // --- Inline Icon Components ---
+    const IconPlus = () => <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+    const IconSearch = () => <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+    const IconBell = () => <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>;
+    const IconSun = () => <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
+    const IconMoon = () => <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
+    const IconShield = () => <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+    const IconThumbsUp = () => <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>;
+    const IconExternalLink = () => <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>;
+    const IconMessageSquare = () => <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
+    const IconLogIn = () => <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>;
+    const IconLogOut = () => <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+    const IconSend = () => <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>;
+    const IconX = () => <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+    const IconLock = () => <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+    const IconUser = () => <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+    const IconActivity = () => <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+
+    const IconGoogle = () => (
+      <svg className="w-5 h-5" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3h3.88c2.27-2.09 3.665-5.17 3.665-9.12z"/>
+        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3c-1.08.72-2.45 1.16-4.05 1.16-3.1 0-5.74-2.09-6.68-4.91H1.28v3.09C3.26 21.3 7.31 24 12 24z"/>
+        <path fill="#FBBC05" d="M5.32 14.34c-.24-.72-.38-1.49-.38-2.34s.14-1.62.38-2.34V6.57H1.28v3.09c-.47 1.78-.72 3.56-.72 5.43s.25 3.65.72 5.43l4.04-3.09z"/>
+        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.28 6.57l4.04 3.09c.94-2.82 3.58-4.91 6.68-4.91z"/>
+      </svg>
+    );
+
+    // --- Firebase Setup ---
+    const firebaseConfig = typeof __firebase_config !== 'undefined'
+      ? JSON.parse(__firebase_config)
+      : {
+          apiKey: "demo-api-key",
+          authDomain: "demo.firebaseapp.com",
+          projectId: "demo-project",
+          storageBucket: "demo.appspot.com",
+          messagingSenderId: "123456789",
+          appId: "1:123456789:web:demo"
+        };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'buildweb-platform';
+
+    function App() {
+      const [user, setUser] = useState(null);
+      const [activeTab, setActiveTab] = useState('explore');
+      const [exploreFilter, setExploreFilter] = useState('Popular');
+      
+      const [isDarkMode, setIsDarkMode] = useState(true);
+      const [language, setLanguage] = useState('ko');
+
+      const [showSearchModal, setShowSearchModal] = useState(false);
+      const [searchQuery, setSearchQuery] = useState('');
+      const [showNotifModal, setShowNotifModal] = useState(false);
+      const [notifications, setNotifications] = useState([
+        { id: 1, title: 'BuildWeb 플랫폼에 오신 것을 환영합니다!', time: '방금 전', unread: true },
+        { id: 2, title: '실시간 빌더 대화방이 열려있습니다.', time: '10분 전', unread: true },
+        { id: 3, title: '새 사이드 프로젝트가 등록되었습니다.', time: '1시간 전', unread: false }
+      ]);
+
+      // 100% 사실(Fact) 기반 실측 데이터로만 초기화 (하드코딩된 더미/가짜 데이터 전면 제거)
+      const [projects, setProjects] = useState([]);
+      const [communityPosts, setCommunityPosts] = useState([]);
+      const [buildersList, setBuildersList] = useState([]); // 실제 회원가입/로그인된 계정만 실시간 집계
+      const [chatMessages, setChatMessages] = useState([]); // 실제 전송된 대화 메시지만 실시간 집계
+      const [newMessageText, setNewMessageText] = useState('');
+      const [visitCount, setVisitCount] = useState(0); // 실제 접속된 순 방문 세션만 정확히 카운트
+      const chatEndRef = useRef(null);
+
+      const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+      const [adminPasswordInput, setAdminPasswordInput] = useState('');
+      const [adminError, setAdminError] = useState('');
+
+      const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+      const [userEmail, setUserEmail] = useState('');
+      const [userName, setUserName] = useState('게스트 빌더');
+      const [userPhoto, setUserPhoto] = useState('');
+      const [userBio, setUserBio] = useState('BuildWeb에서 새로운 사이드 프로젝트를 만들어가는 빌더입니다.');
+      const [loginMethod, setLoginMethod] = useState('');
+
+      const [showLoginModal, setShowLoginModal] = useState(false);
+      const [loginTab, setLoginStep] = useState('buildweb-login'); // 'buildweb-login' | 'buildweb-signup' | 'google'
+      const [loginError, setLoginError] = useState('');
+      const [loginSuccess, setLoginSuccess] = useState('');
+      const [loginLoading, setLoginLoading] = useState(false);
+
+      // BuildWeb 자체 계정 로그인 및 회원가입 전용 폼 상태
+      const [loginEmail, setLoginEmail] = useState('');
+      const [loginPassword, setLoginPassword] = useState('');
+      const [signupName, setSignupName] = useState('');
+      const [signupEmail, setSignupEmail] = useState('');
+      const [signupPassword, setSignupPassword] = useState('');
+      const [signupPasswordConfirm, setSignupPasswordConfirm] = useState('');
+
+      // 구글 로그인 도메인 제약 시 직입력 연동 상태
+      const [googleFallbackActive, setGoogleFallbackActive] = useState(false);
+      const [googleInputEmail, setGoogleInputEmail] = useState('');
+      const [googleInputName, setGoogleInputName] = useState('');
+      const [googleInputPassword, setGoogleInputPassword] = useState('');
+
+      const [wizardStep, setWizardStep] = useState(1);
+      const [newProjectData, setNewProjectData] = useState({
+        title: '',
+        tagline: '',
+        description: '',
+        logoUrl: '',
+        gradient: 'from-blue-600 to-indigo-600',
+        tags: ['AI', 'Productivity'],
+        stage: 'Public',
+        helpNeeded: [],
+        websiteUrl: '',
+        demoUrl: '',
+        githubUrl: '',
+        discordUrl: ''
+      });
+
+      useEffect(() => {
+        const initAuth = async () => {
+          try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+              await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+              await signInAnonymously(auth);
+            }
+          } catch (err) {
+            console.warn("Auth initialization note:", err.message);
+          }
+        };
+        initAuth();
+
+        // 브라우저 세션에 저장된 BuildWeb 계정이 있다면 자동 복원
+        try {
+          const savedSession = sessionStorage.getItem('buildweb_session_user');
+          if (savedSession) {
+            const parsed = JSON.parse(savedSession);
+            setIsUserLoggedIn(true);
+            setUserEmail(parsed.email || '');
+            setUserName(parsed.name || '');
+            setUserPhoto(parsed.photoURL || '');
+            setUserBio(parsed.bio || '');
+            setLoginMethod(parsed.provider || 'BuildWeb 자체 계정');
+          }
+        } catch (_) {}
+
+        const unsubscribe = onAuthStateChanged(auth, (usr) => {
+          setUser(usr);
+          // 구글이나 외부 인증 제공자에서 이메일이 들어온 경우
+          if (usr && usr.email && !sessionStorage.getItem('buildweb_session_user')) {
+            setIsUserLoggedIn(true);
+            setUserEmail(usr.email || '');
+            setUserName(usr.displayName || usr.email.split('@')[0]);
+            setUserPhoto(usr.photoURL || '');
+          }
+          if (usr) {
+            try {
+              const sessionKey = `buildweb_session_${appId}`;
+              if (!sessionStorage.getItem(sessionKey)) {
+                sessionStorage.setItem(sessionKey, 'true');
+                const statsRef = doc(db, 'artifacts', appId, 'public', 'data', 'stats', 'visitors');
+                getDoc(statsRef).then((snap) => {
+                  const current = snap.exists() ? (snap.data().count || 0) : 0;
+                  setDoc(statsRef, { count: current + 1, lastVisited: new Date().toISOString() }, { merge: true }).catch(() => {});
+                }).catch(() => {});
+              }
+            } catch (_) {}
+          }
+        });
+
+        return () => unsubscribe();
+      }, []);
+
+      useEffect(() => {
+        if (!user) return;
+
+        let unsubProjects = () => {};
+        let unsubPosts = () => {};
+        let unsubBuilders = () => {};
+        let unsubChat = () => {};
+        let unsubStats = () => {};
+
+        try {
+          unsubProjects = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'projects'), (snapshot) => {
+            setProjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          }, (err) => console.warn("Firestore projects snapshot notice:", err.message));
+
+          unsubPosts = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'community'), (snapshot) => {
+            setCommunityPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          }, (err) => console.warn("Firestore community snapshot notice:", err.message));
+
+          unsubBuilders = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'builders'), (snapshot) => {
+            // 실제 데이터베이스에 등록된 빌더 문서만 반영
+            setBuildersList(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          }, (err) => console.warn("Firestore builders snapshot notice:", err.message));
+
+          unsubChat = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'chat'), (snapshot) => {
+            // 실제 작성된 채팅 메시지만 반영
+            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            list.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+            setChatMessages(list);
+          }, (err) => console.warn("Firestore chat snapshot notice:", err.message));
+
+          unsubStats = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'stats', 'visitors'), (docSnap) => {
+            if (docSnap.exists()) {
+              setVisitCount(docSnap.data().count || 0);
+            } else {
+              setVisitCount(0);
+            }
+          }, (err) => console.warn("Firestore stats snapshot notice:", err.message));
+        } catch (e) {
+          console.warn("Firestore sync setup:", e.message);
+        }
+
+        return () => {
+          unsubProjects();
+          unsubPosts();
+          unsubBuilders();
+          unsubChat();
+          unsubStats();
+        };
+      }, [user]);
+
+      useEffect(() => {
+        if (activeTab === 'chat') {
+          chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, [chatMessages, activeTab]);
+
+      // 1. BuildWeb 전용 신규 계정 생성 (회원가입)
+      const handleBuildWebSignUp = async (e) => {
+        e.preventDefault();
+        setLoginError('');
+        setLoginSuccess('');
+
+        const trimmedName = signupName.trim();
+        const trimmedEmail = signupEmail.trim().toLowerCase();
+        const pwd = signupPassword.trim();
+        const pwdConfirm = signupPasswordConfirm.trim();
+
+        if (!trimmedName) {
+          setLoginError('빌더 닉네임을 입력해주세요.');
+          return;
+        }
+        if (!trimmedEmail || !trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
+          setLoginError('올바른 이메일 주소를 입력해주세요.');
+          return;
+        }
+        if (pwd.length < 4) {
+          setLoginError('비밀번호는 최소 4자리 이상이어야 합니다.');
+          return;
+        }
+        if (pwd !== pwdConfirm) {
+          setLoginError('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
+          return;
+        }
+
+        // 이미 가입된 이메일인지 실측 확인
+        const emailAlreadyExists = buildersList.some(
+          b => b.email && b.email.toLowerCase() === trimmedEmail
+        );
+        if (emailAlreadyExists) {
+          setLoginError('이미 등록된 이메일 주소입니다. 로그인 탭으로 이동해주세요.');
+          return;
+        }
+
+        setLoginLoading(true);
+        try {
+          const newUserId = 'user-' + Date.now();
+          const newAccountData = {
+            id: newUserId,
+            uid: newUserId,
+            name: trimmedName,
+            email: trimmedEmail,
+            password: pwd, // 웹 플랫폼 내부 계정 인증용
+            bio: `${trimmedName} 님의 BuildWeb 프로필입니다.`,
+            photoURL: '',
+            provider: 'BuildWeb 자체 계정',
+            joinedAt: new Date().toLocaleDateString(),
+            role: 'Verified Web Builder'
+          };
+
+          // Firestore DB에 영구 저장
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'builders', newUserId), newAccountData);
+
+          // 브라우저 세션 저장
+          sessionStorage.setItem('buildweb_session_user', JSON.stringify(newAccountData));
+
+          // 현재 상태 즉시 반영
+          setIsUserLoggedIn(true);
+          setUserEmail(trimmedEmail);
+          setUserName(trimmedName);
+          setUserPhoto('');
+          setUserBio(newAccountData.bio);
+          setLoginMethod('BuildWeb 자체 계정');
+
+          setLoginSuccess('BuildWeb 계정이 성공적으로 생성되었습니다!');
+          setTimeout(() => {
+            setShowLoginModal(false);
+            setLoginSuccess('');
+            setSignupPassword('');
+            setSignupPasswordConfirm('');
+          }, 800);
+        } catch (err) {
+          console.error("Sign up error:", err);
+          setLoginError(`계정 생성 오류: ${err.message}`);
+        } finally {
+          setLoginLoading(false);
+        }
+      };
+
+      // 2. BuildWeb 전용 계정 로그인
+      const handleBuildWebLogin = (e) => {
+        e.preventDefault();
+        setLoginError('');
+        setLoginSuccess('');
+
+        const trimmedEmail = loginEmail.trim().toLowerCase();
+        const pwd = loginPassword.trim();
+
+        if (!trimmedEmail || !pwd) {
+          setLoginError('이메일과 비밀번호를 모두 입력해주세요.');
+          return;
+        }
+
+        // Firestore에서 동기화된 회원 목록 중 일치 계정 탐색
+        const matchedUser = buildersList.find(
+          b => b.email && b.email.toLowerCase() === trimmedEmail
+        );
+
+        if (!matchedUser) {
+          setLoginError('등록되지 않은 이메일입니다. 회원가입을 먼저 진행해주세요.');
+          return;
+        }
+
+        // 비밀번호 확인
+        if (matchedUser.password && matchedUser.password !== pwd) {
+          setLoginError('비밀번호가 일치하지 않습니다. 다시 확인해주세요.');
+          return;
+        }
+
+        // 로그인 성공 처리
+        sessionStorage.setItem('buildweb_session_user', JSON.stringify(matchedUser));
+        setIsUserLoggedIn(true);
+        setUserEmail(matchedUser.email);
+        setUserName(matchedUser.name || matchedUser.email.split('@')[0]);
+        setUserPhoto(matchedUser.photoURL || '');
+        setUserBio(matchedUser.bio || 'BuildWeb 빌더입니다.');
+        setLoginMethod(matchedUser.provider || 'BuildWeb 자체 계정');
+
+        setLoginSuccess(`환영합니다, ${matchedUser.name || '빌더'} 님!`);
+        setTimeout(() => {
+          setShowLoginModal(false);
+          setLoginSuccess('');
+          setLoginPassword('');
+        }, 600);
+      };
+
+      // 3. 구글 로그인 및 샌드박스 제약 환경 자동 연동 처리
+      const handleRealGoogleSignIn = async () => {
+        setLoginError('');
+        setLoginSuccess('');
+        setLoginLoading(true);
+        try {
+          const provider = new GoogleAuthProvider();
+          const result = await signInWithPopup(auth, provider);
+          const googleUser = result.user;
+
+          const gEmail = googleUser.email || '';
+          const gName = googleUser.displayName || gEmail.split('@')[0] || 'Google User';
+          const gPhoto = googleUser.photoURL || '';
+
+          const accountData = {
+            id: googleUser.uid || ('g-' + Date.now()),
+            uid: googleUser.uid,
+            name: gName,
+            email: gEmail,
+            photoURL: gPhoto,
+            bio: `${gName} 님의 구글 연동 빌더 프로필입니다.`,
+            provider: 'Google 연동',
+            joinedAt: new Date().toLocaleDateString(),
+            role: 'Verified Web Builder'
+          };
+
+          // Firestore 동기화
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'builders', accountData.id), accountData, { merge: true });
+          sessionStorage.setItem('buildweb_session_user', JSON.stringify(accountData));
+
+          setIsUserLoggedIn(true);
+          setUserEmail(gEmail);
+          setUserName(gName);
+          setUserPhoto(gPhoto);
+          setLoginMethod('Google 연동');
+          setShowLoginModal(false);
+        } catch (error) {
+          console.warn("Google Auth Handler note:", error);
+          // 웹 샌드박스/아이프레임 환경에서는 도메인 미승인(unauthorized-domain)으로 팝업이 차단됩니다.
+          setGoogleFallbackActive(true);
+          setLoginError('현재 브라우저 미리보기 환경에서는 보안 정책으로 인해 구글 팝업 인증이 차단됩니다. 아래의 [구글 계정 연동 생성]을 사용하시거나 [BuildWeb 자체 계정]을 생성하시면 완벽히 로그인할 수 있습니다.');
+        } finally {
+          setLoginLoading(false);
+        }
+      };
+
+      // 구글 도메인 제약 시 구글 이메일로 BuildWeb 계정 즉시 연동 생성/로그인
+      const handleGoogleFallbackSubmit = async (e) => {
+        e.preventDefault();
+        setLoginError('');
+        if (!googleInputEmail.trim()) return;
+
+        const trimmedEmail = googleInputEmail.trim().toLowerCase();
+        const displayName = googleInputName.trim() || trimmedEmail.split('@')[0];
+        const pwd = googleInputPassword.trim() || 'google1234';
+
+        setLoginLoading(true);
+        try {
+          // 기존 계정 확인
+          const existing = buildersList.find(b => b.email && b.email.toLowerCase() === trimmedEmail);
+          const docId = existing ? (existing.id || existing.uid) : ('g-' + Date.now());
+
+          const accountData = {
+            id: docId,
+            uid: docId,
+            name: displayName,
+            email: trimmedEmail,
+            password: pwd,
+            bio: `${displayName} 님의 구글 연동 프로필입니다.`,
+            photoURL: '',
+            provider: 'Google 연동',
+            joinedAt: existing ? existing.joinedAt : new Date().toLocaleDateString(),
+            role: 'Verified Web Builder'
+          };
+
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'builders', docId), accountData, { merge: true });
+          sessionStorage.setItem('buildweb_session_user', JSON.stringify(accountData));
+
+          setIsUserLoggedIn(true);
+          setUserEmail(trimmedEmail);
+          setUserName(displayName);
+          setUserPhoto('');
+          setLoginMethod('Google 연동');
+          setShowLoginModal(false);
+          setGoogleFallbackActive(false);
+        } catch (err) {
+          setLoginError(`연동 실패: ${err.message}`);
+        } finally {
+          setLoginLoading(false);
+        }
+      };
+
+      const handleLogout = () => {
+        try {
+          sessionStorage.removeItem('buildweb_session_user');
+        } catch (_) {}
+        setIsUserLoggedIn(false);
+        setUserName('게스트 빌더');
+        setUserEmail('');
+        setUserPhoto('');
+        setUserBio('BuildWeb에서 새로운 사이드 프로젝트를 만들어가는 빌더입니다.');
+        setLoginMethod('');
+      };
+
+      const handleAdminLogin = (e) => {
+        e.preventDefault();
+        if (adminPasswordInput === 'janghyun1123!!') {
+          setIsAdminLoggedIn(true);
+          setAdminError('');
+        } else {
+          setAdminError(language === 'ko' ? '비밀번호가 올바르지 않습니다.' : 'Incorrect password.');
+        }
+      };
+
+      const handleCreateProject = async () => {
+        if (!newProjectData.title.trim()) return;
+        const projectItem = {
+          ...newProjectData,
+          id: 'proj-' + Date.now(),
+          authorId: user?.uid || 'guest-user',
+          authorName: userName,
+          authorEmail: userEmail,
+          likes: 0,
+          createdAt: new Date().toISOString()
+        };
+
+        try {
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'projects'), projectItem);
+        } catch (err) {
+          console.warn("Project add to firestore notice, adding locally:", err.message);
+        }
+
+        // Local state update
+        setProjects(prev => [projectItem, ...prev]);
+
+        setWizardStep(1);
+        setNewProjectData({
+          title: '',
+          tagline: '',
+          description: '',
+          logoUrl: '',
+          gradient: 'from-blue-600 to-indigo-600',
+          tags: ['AI', 'Productivity'],
+          stage: 'Public',
+          helpNeeded: [],
+          websiteUrl: '',
+          demoUrl: '',
+          githubUrl: '',
+          discordUrl: ''
+        });
+        setActiveTab('explore');
+      };
+
+      const handleLikeProject = async (projId, currentLikes) => {
+        const nextLikes = (currentLikes || 0) + 1;
+        try {
+          await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'projects', projId), {
+            likes: nextLikes
+          });
+        } catch (err) {
+          console.warn("Like update notice, updating locally:", err.message);
+        }
+        setProjects(prev => prev.map(p => p.id === projId ? { ...p, likes: nextLikes } : p));
+      };
+
+      const handleDeleteProject = async (projId) => {
+        try {
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'projects', projId));
+        } catch (err) {
+          console.warn("Delete update notice, deleting locally:", err.message);
+        }
+        setProjects(prev => prev.filter(p => p.id !== projId));
+      };
+
+      const handleDeleteAllProjects = async () => {
+        const toDelete = [...projects];
+        setProjects([]);
+        for (const p of toDelete) {
+          try {
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'projects', p.id));
+          } catch (err) {
+            console.warn("Batch project delete error:", err);
+          }
+        }
+      };
+
+      const handleClearAllChat = async () => {
+        const toDelete = [...chatMessages];
+        setChatMessages([]);
+        for (const m of toDelete) {
+          try {
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chat', m.id));
+          } catch (err) {
+            console.warn("Batch chat delete error:", err);
+          }
+        }
+      };
+
+      const handleDeleteChatMessage = async (msgId) => {
+        try {
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'chat', msgId));
+        } catch (err) {
+          console.warn("Message delete notice:", err.message);
+        }
+        setChatMessages(prev => prev.filter(m => m.id !== msgId));
+      };
+
+      const handleDeleteBuilder = async (builderId) => {
+        try {
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'builders', builderId));
+        } catch (err) {
+          console.warn("Builder delete notice:", err.message);
+        }
+        setBuildersList(prev => prev.filter(b => b.id !== builderId && b.uid !== builderId));
+      };
+
+      const handleResetVisitors = async () => {
+        try {
+          const statsRef = doc(db, 'artifacts', appId, 'public', 'data', 'stats', 'visitors');
+          await setDoc(statsRef, { count: 1, lastReset: new Date().toISOString() }, { merge: true });
+          setVisitCount(1);
+        } catch (err) {
+          console.warn("Reset visitors notice:", err.message);
+          setVisitCount(1);
+        }
+      };
+
+      const handleSendChatMessage = async (e) => {
+        e.preventDefault();
+        if (!newMessageText.trim()) return;
+
+        if (!isUserLoggedIn) {
+          setShowLoginModal(true);
+          return;
+        }
+
+        const chatItem = {
+          id: 'msg-' + Date.now(),
+          text: newMessageText.trim(),
+          authorName: userName,
+          authorEmail: userEmail,
+          authorId: user?.uid || 'user-' + Date.now(),
+          createdAt: new Date().toISOString()
+        };
+
+        try {
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'chat'), chatItem);
+        } catch (err) {
+          console.warn("Chat send notice, appending locally:", err.message);
+        }
+
+        setChatMessages(prev => [...prev, chatItem]);
+        setNewMessageText('');
+      };
+
+      const gradientOptions = [
+        'from-blue-600 to-indigo-600',
+        'from-purple-600 to-pink-600',
+        'from-emerald-500 to-teal-700',
+        'from-amber-500 to-red-600',
+        'from-cyan-500 to-blue-600',
+        'from-rose-500 to-purple-600'
+      ];
+
+      // Sorting and filtering logic
+      let processedProjects = [...projects].filter(p => 
+        p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.tagline?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.authorName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.tags?.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+
+      if (exploreFilter === 'Popular' || exploreFilter === 'Most Liked') {
+        processedProjects.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+      } else if (exploreFilter === 'Newest') {
+        processedProjects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      } else if (exploreFilter === 'Looking for Testers') {
+        processedProjects = processedProjects.filter(p => p.stage === 'Beta' || p.stage === 'Building');
+      }
+
+      const bgClass = isDarkMode ? "bg-[#0d1117] text-gray-100" : "bg-slate-50 text-gray-900";
+      const navBgClass = isDarkMode ? "bg-[#161b22]/90 border-gray-800 text-gray-100" : "bg-white/90 border-slate-200 text-gray-800 shadow-sm";
+      const cardBgClass = isDarkMode ? "bg-[#161b22] border-gray-800" : "bg-white border-slate-200 shadow-sm";
+      const borderClass = isDarkMode ? "border-gray-800" : "border-slate-200";
+
+      return (
+        <div className={`min-h-screen ${bgClass} font-sans flex flex-col transition-colors duration-200`}>
+          {/* Top Header */}
+          <header className={`sticky top-0 z-40 backdrop-blur-md border-b px-4 lg:px-8 py-3 flex items-center justify-between ${navBgClass}`}>
+            <div className="flex items-center space-x-6 lg:space-x-8">
+              <div 
+                onClick={() => setActiveTab('explore')}
+                className="flex items-center space-x-2.5 cursor-pointer group select-none"
+              >
+                <div className={`p-1 rounded-xl transition-transform group-hover:scale-105 ${isDarkMode ? 'bg-gray-800 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+                  <TargetLogo className="w-7 h-7" />
+                </div>
+                <span className="text-xl font-black tracking-tight group-hover:text-blue-500 transition-colors">
+                  BuildWeb
+                </span>
+              </div>
+
+              <nav className="hidden md:flex items-center space-x-1">
+                <button
+                  onClick={() => setActiveTab('explore')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-colors ${
+                    activeTab === 'explore' ? (isDarkMode ? 'bg-gray-800 text-white' : 'bg-slate-200 text-black') : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  Explore
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (!isUserLoggedIn) { setShowLoginModal(true); }
+                    else { setActiveTab('my-activity'); }
+                  }}
+                  className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-colors ${
+                    activeTab === 'my-activity' ? (isDarkMode ? 'bg-gray-800 text-white' : 'bg-slate-200 text-black') : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  My Activity
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('builders')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-colors ${
+                    activeTab === 'builders' ? (isDarkMode ? 'bg-gray-800 text-white' : 'bg-slate-200 text-black') : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  Builders
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('chat')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-colors flex items-center space-x-1.5 ${
+                    activeTab === 'chat' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-400 hover:text-blue-300'
+                  }`}
+                >
+                  <IconMessageSquare />
+                  <span>대화방</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('about')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-colors ${
+                    activeTab === 'about' ? (isDarkMode ? 'bg-gray-800 text-white' : 'bg-slate-200 text-black') : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  About
+                </button>
+              </nav>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 text-gray-400 mr-1">
+                <button 
+                  onClick={() => setShowSearchModal(true)}
+                  aria-label="Search"
+                  className="p-1.5 hover:text-blue-400 hover:bg-gray-800/50 rounded-lg transition-colors"
+                >
+                  <IconSearch />
+                </button>
+
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowNotifModal(!showNotifModal)}
+                    aria-label="Notifications"
+                    className="p-1.5 hover:text-blue-400 hover:bg-gray-800/50 rounded-lg transition-colors relative"
+                  >
+                    <IconBell />
+                    {notifications.some(n => n.unread) && (
+                      <span className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                    )}
+                  </button>
+
+                  {/* Notification Dropdown */}
+                  {showNotifModal && (
+                    <div className={`absolute right-0 mt-2 w-72 ${cardBgClass} border ${borderClass} rounded-xl shadow-2xl p-3 z-50 text-xs space-y-2`}>
+                      <div className="flex items-center justify-between border-b border-gray-700/60 pb-2">
+                        <span className="font-bold text-gray-200">알림 센터</span>
+                        <button 
+                          onClick={() => setNotifications(prev => prev.map(n => ({ ...n, unread: false })))} 
+                          className="text-[10px] text-blue-400 hover:underline"
+                        >
+                          모두 읽음
+                        </button>
+                      </div>
+                      <div className="space-y-2 max-h-56 overflow-y-auto">
+                        {notifications.map(n => (
+                          <div key={n.id} className={`p-2 rounded-lg ${n.unread ? 'bg-blue-950/40 border border-blue-800/50' : 'bg-gray-900/40'}`}>
+                            <p className="font-medium text-gray-200 text-[11px]">{n.title}</p>
+                            <span className="text-[10px] text-gray-500">{n.time}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button 
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                  aria-label="Toggle Theme"
+                  className="p-1.5 hover:text-amber-400 hover:bg-gray-800/50 rounded-lg transition-colors"
+                >
+                  {isDarkMode ? <IconSun /> : <IconMoon />}
+                </button>
+
+                <span className="text-xs text-gray-600 px-1">|</span>
+
+                <button 
+                  onClick={() => setLanguage(language === 'ko' ? 'en' : 'ko')}
+                  className="text-xs font-semibold px-2 py-1 rounded hover:bg-gray-800/50 transition-colors text-blue-400"
+                >
+                  {language === 'ko' ? '한국어' : 'English'}
+                </button>
+              </div>
+
+              <button
+                onClick={() => setActiveTab('admin')}
+                title="Admin Panel"
+                className={`p-1.5 rounded-lg border text-xs transition-all flex items-center space-x-1 ${
+                  isAdminLoggedIn ? 'bg-purple-900/30 border-purple-500/50 text-purple-300' : 'border-gray-800 text-gray-500 hover:text-gray-400'
+                }`}
+              >
+                <IconShield />
+              </button>
+
+              {!isUserLoggedIn ? (
+                <button
+                  onClick={() => { setShowLoginModal(true); }}
+                  className="text-sm font-semibold text-gray-300 hover:text-white px-3 py-1.5 transition-colors flex items-center space-x-1.5"
+                >
+                  <IconLogIn />
+                  <span>Log in</span>
+                </button>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setActiveTab('profile')}
+                    className="flex items-center space-x-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 px-2.5 py-1 rounded-full text-xs transition-colors"
+                  >
+                    {userPhoto ? (
+                      <img src={userPhoto} alt="Profile" className="w-5 h-5 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-[10px]">
+                        {userName.slice(0, 1)}
+                      </div>
+                    )}
+                    <span className="text-white font-medium max-w-[100px] truncate">{userName}</span>
+                  </button>
+
+                  <button
+                    onClick={handleLogout}
+                    title="Log Out"
+                    className="p-1.5 rounded-lg border border-gray-800 hover:border-gray-700 text-gray-400 hover:text-red-400 text-xs transition-colors"
+                  >
+                    <IconLogOut />
+                  </button>
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  if (!isUserLoggedIn) { setShowLoginModal(true); }
+                  else { setActiveTab('new-project'); }
+                }}
+                className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg text-sm font-semibold flex items-center space-x-1 shadow-md transition-all active:scale-95"
+              >
+                <IconPlus />
+                <span>New Project</span>
+              </button>
+            </div>
+          </header>
+
+          {}
+          {/* Search Modal */}
+          {showSearchModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-start justify-center pt-20 p-4">
+              <div className={`w-full max-w-xl ${cardBgClass} border ${borderClass} rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95`}>
+                <div className="flex items-center justify-between border-b border-gray-700 pb-3">
+                  <div className="flex items-center space-x-2 flex-1">
+                    <IconSearch />
+                    <input 
+                      type="text"
+                      autoFocus
+                      placeholder="프로젝트, 태그, 빌더 검색..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-transparent text-sm text-white outline-none placeholder:text-gray-500"
+                    />
+                  </div>
+                  <button onClick={() => setShowSearchModal(false)} className="text-gray-400 hover:text-white p-1">
+                    <IconX />
+                  </button>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto space-y-2">
+                  {searchQuery.trim() === '' ? (
+                    <p className="text-xs text-gray-500 text-center py-6">검색어를 입력하시면 실시간 결과가 나타납니다.</p>
+                  ) : processedProjects.length === 0 ? (
+                    <p className="text-xs text-gray-500 text-center py-6">검색 결과가 없습니다.</p>
+                  ) : (
+                    processedProjects.map(p => (
+                      <div 
+                        key={p.id} 
+                        onClick={() => { setShowSearchModal(false); setActiveTab('explore'); }}
+                        className="p-3 rounded-xl bg-gray-900/80 hover:bg-gray-800 cursor-pointer flex items-center justify-between text-xs transition-colors"
+                      >
+                        <div>
+                          <div className="font-bold text-white flex items-center space-x-2">
+                            {p.logoUrl ? <img src={p.logoUrl} alt="" className="w-4 h-4 rounded object-cover" /> : <TargetLogo className="w-4 h-4 text-blue-400" />}
+                            <span>{p.title}</span>
+                          </div>
+                          <div className="text-gray-400 text-[11px] mt-0.5">{p.tagline}</div>
+                        </div>
+                        <span className="text-gray-500 text-[10px]">by {p.authorName}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {}
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8">
+
+            {/* TAB 1: EXPLORE */}
+            {activeTab === 'explore' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-gray-800 pb-4">
+                  <div className="flex items-center space-x-2 overflow-x-auto py-1">
+                    {['Popular', 'Newest', 'Most Liked', 'Recently Updated', 'Looking for Testers'].map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => setExploreFilter(f)}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                          exploreFilter === f ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-800/80 text-gray-400 hover:text-gray-200'
+                        }`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Featured Project Banner */}
+                {processedProjects.length > 0 && (
+                  <div className="bg-gradient-to-r from-blue-900/40 via-indigo-900/20 to-gray-900 border border-blue-500/30 rounded-2xl p-6 relative overflow-hidden shadow-xl">
+                    <div className="absolute top-3 right-3 bg-blue-500/20 border border-blue-500/40 text-blue-300 text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full tracking-wider">
+                      FEATURED TODAY
+                    </div>
+                    <div className="max-w-2xl space-y-3">
+                      <div className="flex items-center space-x-3">
+                        {processedProjects[0].logoUrl ? (
+                          <img src={processedProjects[0].logoUrl} alt="logo" className="w-12 h-12 rounded-xl object-cover border border-white/20" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-blue-600/30 border border-blue-400/30 flex items-center justify-center text-blue-300">
+                            <TargetLogo className="w-8 h-8" />
+                          </div>
+                        )}
+                        <div>
+                          <h2 className="text-2xl font-extrabold text-white">{processedProjects[0].title}</h2>
+                          <span className="text-xs text-gray-400">by {processedProjects[0].authorName || '빌더'}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-300 line-clamp-2 leading-relaxed">{processedProjects[0].tagline}</p>
+                      <div className="flex items-center space-x-3 pt-2">
+                        <button 
+                          onClick={() => handleLikeProject(processedProjects[0].id, processedProjects[0].likes)}
+                          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all active:scale-95 shadow"
+                        >
+                          <IconThumbsUp />
+                          <span>추천하기 ({processedProjects[0].likes || 0})</span>
+                        </button>
+                        {processedProjects[0].websiteUrl && (
+                          <a 
+                            href={processedProjects[0].websiteUrl} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+                          >
+                            <span>View Project</span>
+                            <IconExternalLink />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Project Grid */}
+                {processedProjects.length === 0 ? (
+                  <div className="text-center py-20 border border-dashed border-gray-800 rounded-2xl bg-gray-900/30 space-y-3">
+                    <TargetLogo className="w-12 h-12 text-gray-600 mx-auto" />
+                    <h3 className="text-lg font-bold text-gray-300">등록된 사이드 프로젝트가 없습니다.</h3>
+                    <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                      상단의 'New Project' 버튼을 누르고 첫 번째 사이드 프로젝트를 웹 플랫폼에 공개해 보세요!
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (!isUserLoggedIn) { setShowLoginModal(true); }
+                        else { setActiveTab('new-project'); }
+                      }}
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-semibold inline-flex items-center space-x-1 shadow"
+                    >
+                      <IconPlus />
+                      <span>새 프로젝트 시작하기</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {processedProjects.map((proj) => (
+                      <div 
+                        key={proj.id}
+                        className={`${cardBgClass} border hover:border-blue-500/50 rounded-xl overflow-hidden flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-xl`}
+                      >
+                        <div>
+                          <div className={`h-28 bg-gradient-to-r ${proj.gradient || 'from-blue-600 to-indigo-600'} p-4 flex items-start justify-between relative`}>
+                            <div className="w-12 h-12 rounded-xl bg-black/40 backdrop-blur-md p-2 flex items-center justify-center border border-white/20 overflow-hidden shadow-lg">
+                              {proj.logoUrl ? (
+                                <img src={proj.logoUrl} alt="Logo" className="w-full h-full object-cover rounded-lg" />
+                              ) : (
+                                <TargetLogo className="w-8 h-8 text-white" />
+                              )}
+                            </div>
+
+                            <span className="bg-black/50 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/10">
+                              {proj.stage || 'Public'}
+                            </span>
+                          </div>
+
+                          <div className="p-4 space-y-2">
+                            <h3 className="text-base font-extrabold text-white truncate">{proj.title}</h3>
+                            <p className="text-xs font-medium text-gray-300 line-clamp-2 leading-relaxed">
+                              {proj.tagline || proj.description}
+                            </p>
+
+                            {proj.tags && proj.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 pt-1">
+                                {proj.tags.map(tag => (
+                                  <span key={tag} className="bg-gray-800 text-gray-400 text-[10px] px-2 py-0.5 rounded border border-gray-700">
+                                    #{tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="px-4 py-3 bg-gray-900/60 border-t border-gray-800/80 flex items-center justify-between text-xs">
+                          <div className="flex items-center space-x-1.5 text-gray-400">
+                            <IconUser />
+                            <span className="truncate max-w-[100px]">{proj.authorName || '빌더'}</span>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleLikeProject(proj.id, proj.likes)}
+                              className="flex items-center space-x-1 px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition-colors"
+                            >
+                              <IconThumbsUp />
+                              <span>{proj.likes || 0}</span>
+                            </button>
+
+                            {proj.websiteUrl && (
+                              <a 
+                                href={proj.websiteUrl} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                className="p-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700"
+                              >
+                                <IconExternalLink />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {}
+            {/* TAB 2: CHATROOM */}
+            {activeTab === 'chat' && (
+              <div className="max-w-4xl mx-auto space-y-4">
+                <div className={`${cardBgClass} border ${borderClass} rounded-2xl p-5 flex items-center justify-between shadow-lg`}>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center">
+                      <IconMessageSquare />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-white flex items-center space-x-2">
+                        <span>빌더 실시간 대화방</span>
+                        <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full">
+                          실시간 인증 대화
+                        </span>
+                      </h2>
+                      <p className="text-xs text-gray-400">
+                        실제 구글 / 이메일 계정 닉네임으로 소통하세요. ({isUserLoggedIn ? `현재 닉네임: ${userName}` : '로그인 후 작성 가능'})
+                      </p>
+                    </div>
+                  </div>
+
+                  {!isUserLoggedIn && (
+                    <button 
+                      onClick={() => { setShowLoginModal(true); }}
+                      className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3.5 py-2 rounded-xl font-semibold shadow transition-all active:scale-95"
+                    >
+                      로그인하여 참여
+                    </button>
+                  )}
+                </div>
+
+                <div className={`${cardBgClass} border ${borderClass} rounded-2xl p-6 h-[540px] flex flex-col justify-between shadow-2xl`}>
+                  <div className="flex-1 overflow-y-auto space-y-3.5 pr-2">
+                    {chatMessages.length === 0 ? (
+                      <div className="text-center py-24 text-gray-500 text-xs">
+                        작성된 메시지가 없습니다. 첫 번째 대화를 시작해 보세요!
+                      </div>
+                    ) : (
+                      chatMessages.map((msg) => {
+                        const isMe = msg.authorId === user?.uid || msg.authorName === userName;
+                        return (
+                          <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                            <div className="flex items-center space-x-1.5 text-[11px] text-gray-400 mb-1">
+                              <span className="font-bold text-gray-300">{msg.authorName || '익명 빌더'}</span>
+                            </div>
+                            <div className={`max-w-md px-4 py-2.5 rounded-2xl text-xs ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-800 text-gray-100 rounded-bl-none border border-gray-700'}`}>
+                              {msg.text}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+
+                  <form onSubmit={handleSendChatMessage} className="mt-4 flex items-center space-x-2 pt-3 border-t border-gray-800">
+                    <input 
+                      type="text"
+                      placeholder={isUserLoggedIn ? `${userName} 님으로 메시지 입력...` : "로그인 후 작성할 수 있습니다."}
+                      disabled={!isUserLoggedIn}
+                      value={newMessageText}
+                      onChange={(e) => setNewMessageText(e.target.value)}
+                      className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-blue-500 disabled:opacity-50"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!isUserLoggedIn || !newMessageText.trim()}
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 rounded-xl font-semibold text-xs flex items-center space-x-1 transition-all disabled:opacity-50"
+                    >
+                      <IconSend />
+                      <span>전송</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {}
+            {/* TAB 3: MY ACTIVITY */}
+            {activeTab === 'my-activity' && (
+              <div className="max-w-3xl mx-auto space-y-6">
+                <div className={`${cardBgClass} border ${borderClass} rounded-2xl p-6 space-y-4`}>
+                  <div className="flex items-center space-x-3 border-b border-gray-800 pb-4">
+                    <IconActivity />
+                    <div>
+                      <h2 className="text-xl font-bold text-white">My Activity</h2>
+                      <p className="text-xs text-gray-400">{userName} 님의 등록된 프로젝트 관리 영역입니다.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-gray-300">내가 등록한 프로젝트</h3>
+                    {projects.filter(p => p.authorName === userName || p.authorEmail === userEmail).length === 0 ? (
+                      <p className="text-xs text-gray-500 py-6 text-center border border-dashed border-gray-800 rounded-xl">
+                        등록된 프로젝트가 없습니다. 'New Project' 버튼을 눌러 프로젝트를 추가해보세요!
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {projects.filter(p => p.authorName === userName || p.authorEmail === userEmail).map(p => (
+                          <div key={p.id} className="bg-gray-900 border border-gray-800 p-3 rounded-xl flex items-center justify-between text-xs">
+                            <div className="flex items-center space-x-3">
+                              {p.logoUrl ? <img src={p.logoUrl} alt="" className="w-8 h-8 rounded-lg object-cover" /> : <TargetLogo className="w-6 h-6 text-blue-400" />}
+                              <div>
+                                <div className="font-bold text-white">{p.title}</div>
+                                <div className="text-gray-400 text-[11px]">{p.tagline}</div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteProject(p.id)}
+                              className="text-red-400 hover:text-red-300 border border-red-900/50 bg-red-950/40 px-3 py-1 rounded-lg font-semibold transition-colors"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {}
+            {/* TAB 4: BUILDERS */}
+            {activeTab === 'builders' && (
+              <div className="space-y-6">
+                <div className="border-b border-gray-800 pb-4">
+                  <h2 className="text-xl font-bold text-white">Builders Directory</h2>
+                  <p className="text-xs text-gray-400 mt-1">
+                    BuildWeb 웹 플랫폼에서 프로젝트를 만들어가는 실제 빌더 목록입니다.
+                  </p>
+                </div>
+
+                {buildersList.length === 0 ? (
+                  <div className="text-center py-16 text-gray-500 border border-dashed border-gray-800 rounded-xl">
+                    등록된 빌더 정보가 없습니다.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {buildersList.map((b) => (
+                      <div key={b.id} className={`${cardBgClass} border ${borderClass} rounded-xl p-4 flex items-start space-x-4 hover:border-gray-700 transition-colors`}>
+                        {b.photoURL ? (
+                          <img src={b.photoURL} alt="" className="w-11 h-11 rounded-full object-cover shadow" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-base shadow shrink-0">
+                            {b.name ? b.name.slice(0, 1) : 'B'}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-bold text-white truncate">{b.name || 'Anonymous Builder'}</h4>
+                          <span className="text-[10px] text-blue-400 block">{b.role || 'Web Builder'}</span>
+                          <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">{b.bio || '소개글이 없습니다.'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 5: ABOUT */}
+            {activeTab === 'about' && (
+              <div className="max-w-3xl mx-auto py-8 space-y-10">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mx-auto">
+                    <TargetLogo className="w-10 h-10" />
+                  </div>
+                  <h1 className="text-4xl font-black text-white tracking-tight">
+                    Build it, show it, grow it together
+                  </h1>
+                  <p className="text-gray-400 text-base max-w-xl mx-auto leading-relaxed">
+                    BuildWeb은 아이디어 구상부터 사이드 프로젝트 연동, 실시간 대화방까지 모든 빌더들의 연대를 지원하는 오픈 플랫폼입니다.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                  <div className="p-5 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-2">
+                    <div className="text-2xl font-bold text-blue-400">Launch Fast</div>
+                    <p className="text-xs text-gray-400">6단계 마법사로 아이디어를 즉시 웹에 게시하고 피드백을 수집하세요.</p>
+                  </div>
+                  <div className="p-5 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-2">
+                    <div className="text-2xl font-bold text-purple-400">Real Builders</div>
+                    <p className="text-xs text-gray-400">인증된 빌더들과 대화방에서 소통하며 테스터와 협력자를 만나보세요.</p>
+                  </div>
+                  <div className="p-5 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-2">
+                    <div className="text-2xl font-bold text-emerald-400">Open Growth</div>
+                    <p className="text-xs text-gray-400">제품 릴리즈, 투표, 추천을 통해 더 큰 웹 프로덕트로 확장하세요.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {}
+            {/* TAB 6: PROFILE */}
+            {activeTab === 'profile' && (
+              <div className="max-w-2xl mx-auto space-y-6">
+                <div className={`${cardBgClass} border ${borderClass} rounded-2xl p-6 space-y-6 shadow-xl`}>
+                  <div className="flex items-center space-x-4">
+                    {userPhoto ? (
+                      <img src={userPhoto} alt="Profile" className="w-16 h-16 rounded-full object-cover shadow-lg" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-2xl flex items-center justify-center shadow-lg">
+                        {userName.slice(0, 1) || 'U'}
+                      </div>
+                    )}
+                    <div>
+                      <h2 className="text-xl font-bold text-white">{userName}</h2>
+                      <p className="text-xs text-blue-400 mt-0.5">{userEmail || '계정 이메일 미등록'}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 border-t border-gray-800 pt-4">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-400">빌더 닉네임</label>
+                      <input 
+                        type="text" 
+                        value={userName} 
+                        onChange={(e) => setUserName(e.target.value)}
+                        className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-xs text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-400">한줄 소개</label>
+                      <textarea 
+                        rows="3" 
+                        value={userBio} 
+                        onChange={(e) => setUserBio(e.target.value)}
+                        className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-xs text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('explore')}
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow"
+                    >
+                      프로필 저장 완료
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {}
+            {/* TAB 7: NEW PROJECT WIZARD */}
+            {activeTab === 'new-project' && (
+              <div className="max-w-2xl mx-auto py-4 space-y-6">
+                <div className="text-center space-y-1">
+                  <h1 className="text-2xl font-extrabold text-white">New Project</h1>
+                  <p className="text-xs text-gray-400">프로젝트와 커스텀 로고를 등록하세요.</p>
+                </div>
+
+                <div className="flex items-center justify-center space-x-2 sm:space-x-4 py-2">
+                  {[
+                    { step: 1, name: 'Basics' },
+                    { step: 2, name: 'Logo' },
+                    { step: 3, name: 'Cover' },
+                    { step: 4, name: 'Tags' },
+                    { step: 5, name: 'Stage' },
+                    { step: 6, name: 'Links' }
+                  ].map((s) => (
+                    <div key={s.step} className="flex items-center space-x-1.5">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                        wizardStep === s.step ? 'bg-blue-600 text-white' : wizardStep > s.step ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-gray-500'
+                      }`}>
+                        {s.step}
+                      </div>
+                      <span className="hidden sm:inline text-xs text-gray-400">{s.name}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={`${cardBgClass} border ${borderClass} rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl`}>
+                  {wizardStep === 1 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-white">1. 프로젝트 기본 정보</h3>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-300">프로젝트 이름 *</label>
+                        <input 
+                          type="text"
+                          placeholder="예: BuildWeb Target System"
+                          value={newProjectData.title}
+                          onChange={(e) => setNewProjectData({...newProjectData, title: e.target.value})}
+                          className="w-full mt-1.5 bg-gray-900 border border-gray-700 rounded-xl p-3 text-sm text-white outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-300">한줄 소개 *</label>
+                        <input 
+                          type="text"
+                          placeholder="프로젝트 가치를 짧게 적어주세요."
+                          maxLength={80}
+                          value={newProjectData.tagline}
+                          onChange={(e) => setNewProjectData({...newProjectData, tagline: e.target.value})}
+                          className="w-full mt-1.5 bg-gray-900 border border-gray-700 rounded-xl p-3 text-sm text-white outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {wizardStep === 2 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-white">2. 프로젝트 로고 설정</h3>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-300">로고 이미지 URL (선택)</label>
+                        <input 
+                          type="text"
+                          placeholder="https://example.com/logo.png"
+                          value={newProjectData.logoUrl}
+                          onChange={(e) => setNewProjectData({...newProjectData, logoUrl: e.target.value})}
+                          className="w-full mt-1.5 bg-gray-900 border border-gray-700 rounded-xl p-3 text-sm text-white outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div className="p-4 bg-gray-900/60 rounded-xl border border-gray-800 flex items-center space-x-4">
+                        <div className="w-12 h-12 rounded-xl bg-gray-800 p-2 border border-gray-700 flex items-center justify-center overflow-hidden">
+                          {newProjectData.logoUrl ? <img src={newProjectData.logoUrl} alt="Preview" className="w-full h-full object-cover rounded-lg" /> : <TargetLogo className="w-8 h-8 text-blue-400" />}
+                        </div>
+                        <div className="text-xs text-gray-400">URL이 비어있으면 기본 Target 로고가 적용됩니다.</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {wizardStep === 3 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-white">3. 배경 그라데이션 선택</h3>
+                      <div className="grid grid-cols-3 gap-3">
+                        {gradientOptions.map((grad) => (
+                          <div
+                            key={grad}
+                            onClick={() => setNewProjectData({...newProjectData, gradient: grad})}
+                            className={`h-16 rounded-xl bg-gradient-to-r ${grad} cursor-pointer border-2 transition-transform hover:scale-105 ${newProjectData.gradient === grad ? 'border-white ring-2 ring-blue-500' : 'border-transparent'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {wizardStep === 4 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-white">4. 태그 선택</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {['SaaS', 'AI', 'Education', 'Game', 'Finance', 'Productivity'].map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => {
+                              const exists = newProjectData.tags.includes(tag);
+                              setNewProjectData({
+                                ...newProjectData,
+                                tags: exists ? newProjectData.tags.filter(t => t !== tag) : [...newProjectData.tags, tag]
+                              });
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${newProjectData.tags.includes(tag) ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-900 border-gray-700 text-gray-400'}`}
+                          >
+                            #{tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {wizardStep === 5 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-white">5. 진행 단계 선택</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        {['Idea', 'Building', 'Beta', 'Public'].map((stage) => (
+                          <div
+                            key={stage}
+                            onClick={() => setNewProjectData({...newProjectData, stage})}
+                            className={`p-4 rounded-xl border cursor-pointer transition-all ${newProjectData.stage === stage ? 'bg-blue-950 border-blue-500 text-white shadow' : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-700'}`}
+                          >
+                            <h4 className="font-bold text-sm text-white">{stage}</h4>
+                            <p className="text-[11px] text-gray-400 mt-1">
+                              {stage === 'Idea' && '구상 및 타당성 검토'}
+                              {stage === 'Building' && '현재 활발히 코딩 중'}
+                              {stage === 'Beta' && '초기 테스터 유치 중'}
+                              {stage === 'Public' && '누구나 접근 가능한 공개 릴리즈'}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {wizardStep === 6 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-white">6. 웹사이트 및 링크</h3>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-300">웹사이트 / GitHub URL</label>
+                        <input 
+                          type="text" 
+                          placeholder="https://yourproject.com"
+                          value={newProjectData.websiteUrl}
+                          onChange={(e) => setNewProjectData({...newProjectData, websiteUrl: e.target.value})}
+                          className="w-full mt-1.5 bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-xs text-white outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-800">
+                    {wizardStep > 1 ? (
+                      <button type="button" onClick={() => setWizardStep(wizardStep - 1)} className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-gray-300 transition-colors">이전</button>
+                    ) : <div />}
+
+                    {wizardStep < 6 ? (
+                      <button type="button" onClick={() => setWizardStep(wizardStep + 1)} className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white transition-all">다음</button>
+                    ) : (
+                      <button type="button" onClick={handleCreateProject} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white shadow-lg transition-all active:scale-95">등록 완료</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {}
+            {/* TAB 8: ADMIN PANEL */}
+            {activeTab === 'admin' && (
+              <div className="max-w-4xl mx-auto space-y-6">
+                {!isAdminLoggedIn ? (
+                  <div className={`max-w-md mx-auto ${cardBgClass} border ${borderClass} rounded-2xl p-6 sm:p-8 space-y-4 text-center shadow-2xl`}>
+                    <div className="w-12 h-12 rounded-full bg-purple-950 border border-purple-500/40 text-purple-400 flex items-center justify-center mx-auto">
+                      <IconLock />
+                    </div>
+                    <h2 className="text-xl font-bold text-white">관리자 권한 인증</h2>
+
+                    <form onSubmit={handleAdminLogin} className="space-y-3 pt-2">
+                      <input 
+                        type="password"
+                        placeholder="비밀번호..."
+                        value={adminPasswordInput}
+                        onChange={(e) => setAdminPasswordInput(e.target.value)}
+                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500 text-center"
+                      />
+                      {adminError && <p className="text-xs text-red-400">{adminError}</p>}
+                      <button type="submit" className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 rounded-xl text-xs transition-colors shadow">관리자 로그인</button>
+                    </form>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-800 pb-4 gap-3">
+                      <div>
+                        <h2 className="text-2xl font-black text-white">BuildWeb Master Admin</h2>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className="text-xs text-purple-400 font-semibold">인증 완료된 마스터 관리자 모드</span>
+                          <span className="text-[11px] bg-emerald-950 border border-emerald-800 text-emerald-300 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                            <span>●</span>
+                            <span>100% 사실(Fact) 기반 실측 데이터 동기화</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 flex-wrap gap-y-2">
+                        <button 
+                          onClick={handleDeleteAllProjects}
+                          disabled={projects.length === 0}
+                          className="bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/40 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow disabled:opacity-40"
+                        >
+                          모든 프로젝트 일괄 삭제
+                        </button>
+                        <button 
+                          onClick={handleClearAllChat}
+                          disabled={chatMessages.length === 0}
+                          className="bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 border border-amber-500/40 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow disabled:opacity-40"
+                        >
+                          대화방 전체 비우기
+                        </button>
+                        <button 
+                          onClick={handleResetVisitors}
+                          className="bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                        >
+                          방문자 1로 리셋
+                        </button>
+                        <button onClick={() => setIsAdminLoggedIn(false)} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg text-xs transition-colors">로그아웃</button>
+                      </div>
+                    </div>
+
+                    {/* Factual Statistics Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-[#161b22] border border-gray-800 p-5 rounded-2xl shadow-sm">
+                        <div className="text-gray-400 text-xs font-semibold flex items-center justify-between">
+                          <span>총 방문자 수</span>
+                          <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/40">실측</span>
+                        </div>
+                        <div className="text-3xl font-black text-white mt-2 tracking-tight">{visitCount}</div>
+                        <p className="text-[10px] text-gray-500 mt-1">실제 세션 기준 카운트</p>
+                      </div>
+
+                      <div className="bg-[#161b22] border border-gray-800 p-5 rounded-2xl shadow-sm">
+                        <div className="text-gray-400 text-xs font-semibold flex items-center justify-between">
+                          <span>가입자 수</span>
+                          <span className="text-[10px] text-blue-400 bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-800/40">실회원</span>
+                        </div>
+                        <div className="text-3xl font-black text-white mt-2 tracking-tight">{buildersList.length}</div>
+                        <p className="text-[10px] text-gray-500 mt-1">실제 등록된 빌더 계정</p>
+                      </div>
+
+                      <div className="bg-[#161b22] border border-gray-800 p-5 rounded-2xl shadow-sm">
+                        <div className="text-gray-400 text-xs font-semibold flex items-center justify-between">
+                          <span>프로젝트 수</span>
+                          <span className="text-[10px] text-purple-400 bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-800/40">실등록</span>
+                        </div>
+                        <div className="text-3xl font-black text-white mt-2 tracking-tight">{projects.length}</div>
+                        <p className="text-[10px] text-gray-500 mt-1">실제 제출된 사이드 프로젝트</p>
+                      </div>
+
+                      <div className="bg-[#161b22] border border-gray-800 p-5 rounded-2xl shadow-sm">
+                        <div className="text-gray-400 text-xs font-semibold flex items-center justify-between">
+                          <span>실시간 메시지 수</span>
+                          <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/40">실메시지</span>
+                        </div>
+                        <div className="text-3xl font-black text-white mt-2 tracking-tight">{chatMessages.length}</div>
+                        <p className="text-[10px] text-gray-500 mt-1">실제 전송된 대화 기록</p>
+                      </div>
+                    </div>
+
+                    {/* Factual Builders List */}
+                    <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-5 space-y-3">
+                      <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+                        <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                          <span>실제 가입 회원 목록</span>
+                          <span className="text-xs text-gray-500 font-normal">({buildersList.length}명)</span>
+                        </h3>
+                        <span className="text-[10px] text-gray-400">더미 계정 없음</span>
+                      </div>
+                      {buildersList.length === 0 ? (
+                        <p className="text-xs text-gray-500 py-4 text-center">
+                          현재 등록된 실제 회원이 없습니다. 상단에서 로그인하거나 새 회원이 가입하면 실시간으로 목록에 반영됩니다.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                          {buildersList.map(b => (
+                            <div key={b.id || b.uid} className="bg-gray-900 border border-gray-800 p-3 rounded-xl flex items-center justify-between text-xs">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 font-bold flex items-center justify-center text-xs">
+                                  {(b.name || 'B').slice(0, 1)}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-white flex items-center space-x-2">
+                                    <span>{b.name || '익명 빌더'}</span>
+                                    <span className="text-[10px] text-gray-500">{b.provider ? `(${b.provider})` : ''}</span>
+                                  </div>
+                                  <div className="text-gray-400 text-[11px]">{b.email || '이메일 미공개'} · 가입: {b.joinedAt || '최근'}</div>
+                                </div>
+                              </div>
+                              <button 
+                                onClick={() => handleDeleteBuilder(b.id || b.uid)}
+                                className="text-red-400 hover:text-red-300 border border-red-900/50 bg-red-950/40 px-2.5 py-1 rounded-lg text-[11px] font-medium"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Factual Chat Messages Log */}
+                    <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-5 space-y-3">
+                      <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+                        <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                          <span>실제 실시간 대화 기록</span>
+                          <span className="text-xs text-gray-500 font-normal">({chatMessages.length}개)</span>
+                        </h3>
+                        <span className="text-[10px] text-gray-400">더미 메시지 없음</span>
+                      </div>
+                      {chatMessages.length === 0 ? (
+                        <p className="text-xs text-gray-500 py-4 text-center">
+                          현재 작성된 실제 대화 메시지가 없습니다. 상단 '대화방' 탭에서 실제 대화를 나누면 실시간으로 집계됩니다.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                          {chatMessages.map(m => (
+                            <div key={m.id} className="bg-gray-900 border border-gray-800 p-3 rounded-xl flex items-center justify-between text-xs">
+                              <div className="flex-1 min-w-0 mr-3">
+                                <div className="font-bold text-blue-400 text-[11px]">{m.authorName || '빌더'} <span className="text-gray-500 font-normal">{m.createdAt ? new Date(m.createdAt).toLocaleTimeString() : ''}</span></div>
+                                <div className="text-gray-200 text-xs mt-0.5 truncate">{m.text}</div>
+                              </div>
+                              <button 
+                                onClick={() => handleDeleteChatMessage(m.id)}
+                                className="text-red-400 hover:text-red-300 border border-red-900/50 bg-red-950/40 px-2.5 py-1 rounded-lg text-[11px] font-medium shrink-0"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </main>
+
+          {}
+          {/* Login Modal */}
+          {showLoginModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+              <div className="bg-[#0d1117] border border-gray-800 rounded-3xl w-full max-w-md p-6 sm:p-8 relative space-y-5 text-center shadow-2xl animate-in fade-in zoom-in-95">
+                <button 
+                  onClick={() => { setShowLoginModal(false); setLoginError(''); setLoginSuccess(''); }} 
+                  className="absolute top-5 right-5 text-gray-400 hover:text-white p-1"
+                >
+                  <IconX />
+                </button>
+
+                <div className="w-12 h-12 bg-[#1c2128] border border-gray-700/80 rounded-2xl flex items-center justify-center mx-auto">
+                  <TargetLogo className="w-8 h-8 text-blue-400" />
+                </div>
+
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-extrabold text-white">Sign in to BuildWeb</h2>
+                  <p className="text-xs text-gray-400 leading-relaxed max-w-xs mx-auto">
+                    BuildWeb 전용 계정을 생성하여 언제든 다시 로그인하거나, 구글 계정을 연동할 수 있습니다.
+                  </p>
+                </div>
+
+                {/* 3-Way Tab Switcher */}
+                <div className="flex bg-gray-900/90 p-1 rounded-xl border border-gray-800 text-[11px] font-bold">
+                  <button 
+                    onClick={() => { setLoginStep('buildweb-login'); setLoginError(''); setLoginSuccess(''); }}
+                    className={`flex-1 py-2 rounded-lg transition-all ${loginTab === 'buildweb-login' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    계정 로그인
+                  </button>
+                  <button 
+                    onClick={() => { setLoginStep('buildweb-signup'); setLoginError(''); setLoginSuccess(''); }}
+                    className={`flex-1 py-2 rounded-lg transition-all ${loginTab === 'buildweb-signup' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    신규 회원가입
+                  </button>
+                  <button 
+                    onClick={() => { setLoginStep('google'); setLoginError(''); setLoginSuccess(''); }}
+                    className={`flex-1 py-2 rounded-lg transition-all ${loginTab === 'google' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    Google 연동
+                  </button>
+                </div>
+
+                {/* Status Messages */}
+                {loginError && (
+                  <div className="p-3 bg-red-950/70 border border-red-800 rounded-xl text-xs text-red-300 text-left leading-relaxed">
+                    {loginError}
+                  </div>
+                )}
+                {loginSuccess && (
+                  <div className="p-3 bg-emerald-950/70 border border-emerald-800 rounded-xl text-xs text-emerald-300 text-center font-bold">
+                    {loginSuccess}
+                  </div>
+                )}
+
+                {/* TAB 1: BuildWeb 자체 계정 로그인 */}
+                {loginTab === 'buildweb-login' && (
+                  <form onSubmit={handleBuildWebLogin} className="space-y-3.5 text-left pt-1">
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-300">이메일 주소</label>
+                      <input 
+                        type="email" 
+                        required
+                        placeholder="yourname@example.com" 
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-300">비밀번호</label>
+                      <input 
+                        type="password" 
+                        required
+                        placeholder="••••••••" 
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      disabled={loginLoading}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl text-xs transition-colors shadow-lg active:scale-95 disabled:opacity-50 mt-2"
+                    >
+                      {loginLoading ? "로그인 확인 중..." : "BuildWeb 로그인"}
+                    </button>
+
+                    <div className="text-center pt-2">
+                      <span className="text-xs text-gray-500">아직 계정이 없으신가요? </span>
+                      <button 
+                        type="button" 
+                        onClick={() => { setLoginStep('buildweb-signup'); setLoginError(''); }}
+                        className="text-xs text-blue-400 font-bold hover:underline"
+                      >
+                        신규 회원가입하기
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* TAB 2: BuildWeb 자체 회원가입 */}
+                {loginTab === 'buildweb-signup' && (
+                  <form onSubmit={handleBuildWebSignUp} className="space-y-3 text-left pt-1">
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-300">빌더 닉네임 *</label>
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="예: 장현, 테크빌더" 
+                        value={signupName}
+                        onChange={(e) => setSignupName(e.target.value)}
+                        className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-300">이메일 주소 *</label>
+                      <input 
+                        type="email" 
+                        required
+                        placeholder="yourname@gmail.com" 
+                        value={signupEmail}
+                        onChange={(e) => setSignupEmail(e.target.value)}
+                        className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[11px] font-semibold text-gray-300">비밀번호 *</label>
+                        <input 
+                          type="password" 
+                          required
+                          placeholder="최소 4자리" 
+                          value={signupPassword}
+                          onChange={(e) => setSignupPassword(e.target.value)}
+                          className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-semibold text-gray-300">비밀번호 확인 *</label>
+                        <input 
+                          type="password" 
+                          required
+                          placeholder="비밀번호 재입력" 
+                          value={signupPasswordConfirm}
+                          onChange={(e) => setSignupPasswordConfirm(e.target.value)}
+                          className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-gray-500 leading-relaxed">
+                      ※ 가입된 정보는 BuildWeb 플랫폼 데이터베이스에 실측 저장되어 나중에도 그대로 로그인할 수 있습니다.
+                    </p>
+
+                    <button 
+                      type="submit" 
+                      disabled={loginLoading}
+                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs transition-colors shadow-lg active:scale-95 disabled:opacity-50 mt-1"
+                    >
+                      {loginLoading ? "계정 등록 중..." : "BuildWeb 계정 생성 및 바로 로그인"}
+                    </button>
+                  </form>
+                )}
+
+                {/* TAB 3: Google 연동 및 도메인 제약 폴백 */}
+                {loginTab === 'google' && (
+                  <div className="space-y-3.5 pt-1 text-left">
+                    <div className="p-3 bg-blue-950/40 border border-blue-800/60 rounded-xl text-[11px] text-blue-300 leading-relaxed">
+                      <strong>구글 로그인 안내:</strong> 웹 샌드박스/아이프레임 환경에서는 구글 팝업 인증 시 <span className="text-white font-bold">도메인 미승인 보안 제약</span>이 발생할 수 있습니다. 아래 팝업을 먼저 시도하거나, 직입력 연동으로 바로 로그인하실 수 있습니다.
+                    </div>
+
+                    {!googleFallbackActive ? (
+                      <div className="space-y-2">
+                        <button 
+                          type="button"
+                          onClick={handleRealGoogleSignIn} 
+                          disabled={loginLoading}
+                          className="w-full bg-[#161b22] hover:bg-gray-800 border border-gray-700 text-white py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center space-x-2.5 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                        >
+                          <IconGoogle />
+                          <span>{loginLoading ? "구글 인증 창 호출 중..." : "Google 팝업으로 로그인 시도"}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setGoogleFallbackActive(true)}
+                          className="w-full text-center text-xs text-blue-400 hover:underline py-1"
+                        >
+                          팝업이 차단되거나 오류가 나나요? 구글 계정 직접 연동하기 →
+                        </button>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleGoogleFallbackSubmit} className="space-y-3 border border-gray-800 bg-gray-900/60 p-3.5 rounded-2xl">
+                        <div className="text-xs font-bold text-blue-400 flex items-center space-x-1.5">
+                          <IconGoogle />
+                          <span>소유하신 구글 계정 정보를 입력하세요:</span>
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-gray-300">구글 이메일 *</label>
+                          <input 
+                            type="email" 
+                            required
+                            placeholder="yourname@gmail.com" 
+                            value={googleInputEmail}
+                            onChange={(e) => setGoogleInputEmail(e.target.value)}
+                            className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-gray-300">닉네임</label>
+                          <input 
+                            type="text" 
+                            placeholder="표시할 빌더 이름" 
+                            value={googleInputName}
+                            onChange={(e) => setGoogleInputName(e.target.value)}
+                            className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold text-gray-300">비밀번호 (나중에 재로그인용)</label>
+                          <input 
+                            type="password" 
+                            placeholder="비밀번호 설정" 
+                            value={googleInputPassword}
+                            onChange={(e) => setGoogleInputPassword(e.target.value)}
+                            className="w-full mt-1 bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-xs text-white outline-none focus:border-blue-500"
+                          />
+                        </div>
+                        <button 
+                          type="submit" 
+                          disabled={loginLoading}
+                          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs shadow transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          {loginLoading ? "연동 처리 중..." : "구글 계정으로 즉시 연동 및 로그인"}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <footer className="border-t border-gray-800/80 bg-[#161b22]/50 py-6 px-4 text-center text-xs text-gray-500">
+            <p>© 2026 BuildWeb Platform. All rights reserved.</p>
+          </footer>
+        </div>
+      );
+    }
+
+    const rootElement = document.getElementById('root');
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(<App />);
+  </script>
+</body>
+</html>
